@@ -20,13 +20,14 @@ let modules = {
 gulp.task('default', function() {
 	return gulp.src('./index.js')
 		.pipe(webpack({
-			watch: false,
+			watch: true,
 			output: {
 				filename: 'parallax.js'
 			},
 			module: modules
 		}))
 		.pipe(gulp.dest('dest/'))
+		.pipe(gulp.dest(path.join(path.resolve(), '/../../Desktop/')))
 		.pipe(notify("<%= file.relative %> 成功生成!"));
 });
 

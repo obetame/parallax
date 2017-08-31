@@ -1,4 +1,7 @@
-import parallax from './src/index.js';
-window.parallax = parallax;
+import Parallax from './src/index.js';
 
-export default parallax;
+if (typeof window !== 'undefined') {
+	window.Parallax = Parallax;
+}
+
+export default Parallax;
