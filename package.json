@@ -1,10 +1,11 @@
 {
-  "name": "parallax",
+  "name": "motion-parallax",
   "version": "1.0.0",
-  "description": "a parallax effect plugin for js.",
+  "description": "Focus on interaction, rather than just rolling parallax",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "dev": "gulp",
+    "min": "gulp min"
   },
   "repository": {
     "type": "git",
@@ -14,7 +15,8 @@
     "parallax",
     "effect",
     "js",
-    "javascript"
+    "javascript",
+    "motion"
   ],
   "author": "zhouyuexie",
   "license": "MIT",

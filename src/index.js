@@ -84,35 +84,20 @@ export default class Parallax {
 		this._config = Object.assign({
 			xRange: 20,
 			yRange: 20,
-			listenElement: window
+			listenElement: window,
+			enterCallback: () => {},
+			leaveCallback: () => {}
 		}, config);
-
-		// {
-		// 	element: element,
-		// 	config: config
-		// }
-		this.animateElements = [];
-
-		// {
-		// 	element: element,
-		// 	xRange: xRange,
-		// 	yRange: yRange,
-		// 	offsetLeft: offsetLeft,
-		// 	offsetTop: offsetTop,
-		// 	listenElement: listenElement,
-		// 	listenElementWidth: listenElementWidth,
-		// 	listenElementHeight: listenElementHeight
-		// }
-		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
-
-		// [doms]
 		this.element = _getElement(ele); // 获取元素
+		this.animateElements = [];
+		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
 		this.isMobile = Boolean(navigator.userAgent.match(/(iPhone|iPod|Android|ios)/i));
+		this.isEnter = false; // 是否进入tag
 
-		this.add();
-
-		this._init();
+		this.add(); // add all element to this.animateElements
+		this._init(); // this.animateElementsConfig
 		this._resize();
+		this._start();
 	}
 
 	/** 初始化配置 */
@@ -145,16 +130,28 @@ export default class Parallax {
 		});
 	}
 
-	/** 移动图片形成视差 */
-	start() {
+	/** 开始监听事件(移动dom) */
+	_start() {
 		// 监听元素监听鼠标移动事件
-		_addEvent(_getElement(this._config.listenElement, true), 'mousemove', e => {
+		const listenElement = _getElement(this._config.listenElement, true);
+		_addEvent(listenElement, 'mousemove', e => {
+			if (!this.isEnter) {
+				this.isEnter = true;
+				this._config.enterCallback();
+			}
 			requestAnimationFrame(() => {
 				for(let i = 0; i < this.animateElementsConfig.length; i++) {
 					this.animateElementsConfig[i].element.style.top = (e.pageY / this.animateElementsConfig[i].listenElementHeight) * this.animateElementsConfig[i].yRange + this.animateElementsConfig[i].offsetTop + 'px';
 					this.animateElementsConfig[i].element.style.left = (e.pageX / this.animateElementsConfig[i].listenElementWidth) * this.animateElementsConfig[i].xRange + this.animateElementsConfig[i].offsetLeft + 'px';
 				}
-			})
+			});
+		});
+		// 监听移除事件
+		_addEvent(listenElement, 'mouseleave', e => {
+			if (this.isEnter) {
+				this.isEnter = false;
+				this._config.leaveCallback();
+			}
 		});
 		return this;
 	}
