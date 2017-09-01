@@ -8,13 +8,13 @@
 You can use npm:
 
 ```bash
-npm install parallax --save
+npm install motion-parallax --save
 ```
 
 and then in you js file:
 
 ```js
-const Parallax = require('parallax'); 
+const Parallax = require('motion-parallax'); 
 ```
 
 Or download `parallax.min.js` file and include in you document:
