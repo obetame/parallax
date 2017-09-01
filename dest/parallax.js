@@ -745,6 +745,13 @@ var _addEvent = function () {
 	}
 }();
 
+/** 动画 */
+var requestAnimationFrame = function () {
+	return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function (callback) {
+		window.setTimeout(callback, 1000 / 60);
+	};
+}();
+
 /** 选择器获取dom,是否是获取监听事件的元素 */
 var _getElement = function _getElement(ele, isListen) {
 	if ((typeof ele === 'undefined' ? 'undefined' : (0, _typeof3.default)(ele)) === 'object') {
@@ -798,19 +805,38 @@ var Parallax = function () {
 		var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 		(0, _classCallCheck3.default)(this, Parallax);
 
-		this.config = (0, _assign2.default)({
-			maxWidth: 20,
-			maxHeight: 20,
+		this._config = (0, _assign2.default)({
+			xRange: 20,
+			yRange: 20,
 			listenElement: window
 		}, config);
-		this.animateElements = [], // 需要进行动画的所有dom有关的细节
-		this.animateElementsConfig;
+
+		// {
+		// 	element: element,
+		// 	config: config
+		// }
+		this.animateElements = [];
+
+		// {
+		// 	element: element,
+		// 	xRange: xRange,
+		// 	yRange: yRange,
+		// 	offsetLeft: offsetLeft,
+		// 	offsetTop: offsetTop,
+		// 	listenElement: listenElement,
+		// 	listenElementWidth: listenElementWidth,
+		// 	listenElementHeight: listenElementHeight
+		// }
+		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
+
+		// [doms]
 		this.element = _getElement(ele); // 获取元素
+		this.isMobile = Boolean(navigator.userAgent.match(/(iPhone|iPod|Android|ios)/i));
 
-		this.add(); // 增加所有的element元素
+		this.add();
 
-		this._init(); // 初始化动画
-		return this;
+		this._init();
+		this._resize();
 	}
 
 	/** 初始化配置 */
@@ -822,22 +848,28 @@ var Parallax = function () {
 			var _this2 = this;
 
 			this.animateElementsConfig = this.animateElements.map(function (ele, index) {
-				var maxWidth = ele.dataset ? parseInt(ele.dataset.maxwidth, 0) || _this2.config.maxWidth : _this2.config.maxWidth,
+				_this2._clearStyle(ele.element); // 清除之前的top,left样式
+				var xRange = ele.element.dataset ? parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange : ele.config.xRange,
 				    // 默认优先dom上的参数
-				maxHeight = ele.dataset ? parseInt(ele.dataset.maxheight, 0) || _this2.config.maxHeight : _this2.config.maxHeight,
-				    offsetLeft = ele.offsetLeft,
+				yRange = ele.element.dataset ? parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange : ele.config.yRange,
+				    offsetLeft = ele.element.offsetLeft,
 				    // 左边的距离
-				offsetTop = ele.offsetTop,
+				offsetTop = ele.element.offsetTop,
 				    // 上边的距离
-				listenElement = _getElement(_this2.config.listenElement, true),
+				listenElement = _getElement(ele.config.listenElement, true),
 				    // 获取监听事件的元素
 				listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth,
 				    // 监听的元素的宽度
 				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
+
+				if (_this2.isMobile) {
+					// 配置移动端样式
+					ele.element.style.transition = 'top,left 0.2s ease-in-out'; // 移动端增加缓动动画
+				}
 				return {
-					element: ele,
-					maxWidth: maxWidth,
-					maxHeight: maxHeight,
+					element: ele.element,
+					xRange: xRange,
+					yRange: yRange,
 					offsetLeft: offsetLeft,
 					offsetTop: offsetTop,
 					listenElement: listenElement,
@@ -855,12 +887,14 @@ var Parallax = function () {
 			var _this3 = this;
 
 			// 监听元素监听鼠标移动事件
-			_addEvent(_getElement(this.config.listenElement, true), 'mousemove', _throttle(function (e) {
-				for (var i = 0; i < _this3.animateElementsConfig.length; i++) {
-					_this3.animateElementsConfig[i].element.style.top = e.pageY / _this3.animateElementsConfig[i].listenElementHeight * _this3.animateElementsConfig[i].maxHeight + _this3.animateElementsConfig[i].offsetTop + 'px';
-					_this3.animateElementsConfig[i].element.style.left = e.pageX / _this3.animateElementsConfig[i].listenElementWidth * _this3.animateElementsConfig[i].maxWidth + _this3.animateElementsConfig[i].offsetLeft + 'px';
-				}
-			}));
+			_addEvent(_getElement(this._config.listenElement, true), 'mousemove', function (e) {
+				requestAnimationFrame(function () {
+					for (var i = 0; i < _this3.animateElementsConfig.length; i++) {
+						_this3.animateElementsConfig[i].element.style.top = e.pageY / _this3.animateElementsConfig[i].listenElementHeight * _this3.animateElementsConfig[i].yRange + _this3.animateElementsConfig[i].offsetTop + 'px';
+						_this3.animateElementsConfig[i].element.style.left = e.pageX / _this3.animateElementsConfig[i].listenElementWidth * _this3.animateElementsConfig[i].xRange + _this3.animateElementsConfig[i].offsetLeft + 'px';
+					}
+				});
+			});
 			return this;
 		}
 
@@ -870,30 +904,92 @@ var Parallax = function () {
 		key: 'add',
 		value: function add() {
 			var ele = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.element;
+			var config = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
+			config = (0, _assign2.default)({}, this._config, config);
 			var element = _getElement(ele);
-			if (element.length === 0) {
+			if (!element || element.length === 0) {
 				// 没有找到元素
-				throw new Error('No select dom.');
+				console.warn('Element not found!\n未找到元素!');
 				return;
 			};
 			if (element.length) {
 				for (var i = 0; i < element.length; i++) {
-					this.animateElements.push(element[i]);
+					this.animateElements.push({
+						element: element[i],
+						config: config
+					});
 				}
 			} else {
-				this.animateElements.push(element);
+				this.animateElements.push({
+					element: element,
+					config: config
+				});
 			}
 			return this;
 		}
 
-		/** 添加完新的动画元素后需要刷新 */
+		/** 移除一个元素 */
+
+	}, {
+		key: 'remove',
+		value: function remove(ele) {
+			var element = _getElement(ele);
+			if (!element || element.length === 0) {
+				// 没有找到元素
+				console.warn('Element not found!\n未找到需要删除的元素.');
+				return;
+			};
+
+			// 移除元素
+			for (var i = 0; i < element.length; i++) {
+				for (var j = 0; j < this.animateElements.length; j++) {
+					if (element[i] === this.animateElements[j].element || element[i].isEqualNode(this.animateElements[j].element)) {
+						this.animateElements[j].isRemove = true; // 标志需要稍后移除的元素
+					}
+				}
+			}
+			this.animateElements = this.animateElements.filter(function (item) {
+				return !item.isRemove;
+			}); // 移除
+			return this;
+		}
+
+		/** 添加完新的动画元素后需要刷新(添加元素都要手动刷新,考虑到可能一次加很多元素就让使用者自己控制) */
 
 	}, {
 		key: 'refresh',
 		value: function refresh() {
 			this._init();
 			return this;
+		}
+
+		/** 监听resize重新绘制 */
+
+	}, {
+		key: '_resize',
+		value: function _resize() {
+			var _this4 = this;
+
+			_addEvent(window, 'resize', _throttle(function () {
+				_this4.refresh();
+			}, 200));
+		}
+
+		/** 清除之前的样式 */
+
+	}, {
+		key: '_clearStyle',
+		value: function _clearStyle(ele) {
+			var style = ele.getAttribute('style'); // 获取样式
+			if (style) {
+				// 修复resize后获取的top,left是之前动画最后帧设置的bug
+				style = style.split(';').filter(function (item) {
+					var trim = item.trim();
+					return trim.slice(0, 3) !== 'top' && trim.slice(0, 4) !== 'left';
+				});
+				ele.setAttribute('style', style.join(';'));
+			}
 		}
 	}]);
 	return Parallax;

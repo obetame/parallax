@@ -25,6 +25,18 @@ const _addEvent = (function(){
 	}
 })();
 
+/** 动画 */
+const requestAnimationFrame = (function(){
+	return  window.requestAnimationFrame ||
+		window.webkitRequestAnimationFrame ||
+		window.mozRequestAnimationFrame    ||
+		window.oRequestAnimationFrame      ||
+		window.msRequestAnimationFrame     ||
+		function(callback){
+			window.setTimeout(callback, 1000 / 60);
+		};
+})();
+
 /** 选择器获取dom,是否是获取监听事件的元素 */
 const _getElement = function(ele, isListen) {
 	if (typeof ele === 'object') {
@@ -48,7 +60,7 @@ const _getType = function(ele) {
 }
 
 /** 函数节流 */
-const _throttle = function(fn, time = 1000/30) {
+const _throttle = function(fn, time = 1000/60) {
 	let lastTime,
 			timer;
 	return function() {
@@ -69,36 +81,61 @@ const _throttle = function(fn, time = 1000/30) {
 /** 导出 */
 export default class Parallax {
 	constructor(ele, config = {}) {
-		this.config = Object.assign({
-			maxWidth: 20,
-			maxHeight: 20,
+		this._config = Object.assign({
+			xRange: 20,
+			yRange: 20,
 			listenElement: window
 		}, config);
-		this.animateElements = [], // 需要进行动画的所有dom有关的细节
-		this.animateElementsConfig;
+
+		// {
+		// 	element: element,
+		// 	config: config
+		// }
+		this.animateElements = [];
+
+		// {
+		// 	element: element,
+		// 	xRange: xRange,
+		// 	yRange: yRange,
+		// 	offsetLeft: offsetLeft,
+		// 	offsetTop: offsetTop,
+		// 	listenElement: listenElement,
+		// 	listenElementWidth: listenElementWidth,
+		// 	listenElementHeight: listenElementHeight
+		// }
+		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
+
+		// [doms]
 		this.element = _getElement(ele); // 获取元素
+		this.isMobile = Boolean(navigator.userAgent.match(/(iPhone|iPod|Android|ios)/i));
 
-		this.add(); // 增加所有的element元素
+		this.add();
 
-		this._init(); // 初始化动画
-		return this;
+		this._init();
+		this._resize();
 	}
 
 	/** 初始化配置 */
 	_init() {
 		this.animateElementsConfig = this.animateElements.map((ele, index) => {
+			this._clearStyle(ele.element); // 清除之前的top,left样式
 			const 
-				maxWidth = ele.dataset ? parseInt(ele.dataset.maxwidth, 0) || this.config.maxWidth : this.config.maxWidth, // 默认优先dom上的参数
-				maxHeight = ele.dataset ? parseInt(ele.dataset.maxheight, 0) || this.config.maxHeight : this.config.maxHeight,
-				offsetLeft = ele.offsetLeft, // 左边的距离
-				offsetTop = ele.offsetTop, // 上边的距离
-				listenElement = _getElement(this.config.listenElement, true), // 获取监听事件的元素
+				xRange = ele.element.dataset ? parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange : ele.config.xRange, // 默认优先dom上的参数
+				yRange = ele.element.dataset ? parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange : ele.config.yRange,
+				offsetLeft = ele.element.offsetLeft, // 左边的距离
+				offsetTop = ele.element.offsetTop, // 上边的距离
+				listenElement = _getElement(ele.config.listenElement, true), // 获取监听事件的元素
 				listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth, // 监听的元素的宽度
 				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
+
+			if (this.isMobile) {
+				// 配置移动端样式
+				ele.element.style.transition = 'top,left 0.2s ease-in-out'; // 移动端增加缓动动画
+			}
 			return {
-				element: ele,
-				maxWidth: maxWidth,
-				maxHeight: maxHeight,
+				element: ele.element,
+				xRange: xRange,
+				yRange: yRange,
 				offsetLeft: offsetLeft,
 				offsetTop: offsetTop,
 				listenElement: listenElement,
@@ -111,37 +148,86 @@ export default class Parallax {
 	/** 移动图片形成视差 */
 	start() {
 		// 监听元素监听鼠标移动事件
-		_addEvent(_getElement(this.config.listenElement, true), 'mousemove', _throttle(e => {
-			for(let i = 0; i < this.animateElementsConfig.length; i++) {
-				this.animateElementsConfig[i].element.style.top = (e.pageY / this.animateElementsConfig[i].listenElementHeight) * this.animateElementsConfig[i].maxHeight + this.animateElementsConfig[i].offsetTop + 'px';
-				this.animateElementsConfig[i].element.style.left = (e.pageX / this.animateElementsConfig[i].listenElementWidth) * this.animateElementsConfig[i].maxWidth + this.animateElementsConfig[i].offsetLeft + 'px';
-			}
-		}));
+		_addEvent(_getElement(this._config.listenElement, true), 'mousemove', e => {
+			requestAnimationFrame(() => {
+				for(let i = 0; i < this.animateElementsConfig.length; i++) {
+					this.animateElementsConfig[i].element.style.top = (e.pageY / this.animateElementsConfig[i].listenElementHeight) * this.animateElementsConfig[i].yRange + this.animateElementsConfig[i].offsetTop + 'px';
+					this.animateElementsConfig[i].element.style.left = (e.pageX / this.animateElementsConfig[i].listenElementWidth) * this.animateElementsConfig[i].xRange + this.animateElementsConfig[i].offsetLeft + 'px';
+				}
+			})
+		});
 		return this;
 	}
 
 	/** 添加一个新的动画元素 */
 	add(ele = this.element, config = {}) {
-		this.config = Object.assign({}, this.config, config);
+		config = Object.assign({}, this._config, config);
 		const element = _getElement(ele);
-		if (element.length === 0) {
+		if (!element || element.length === 0) {
 			// 没有找到元素
-			throw new Error('No select dom.');
+			console.warn('Element not found!\n未找到元素!');
 			return;
 		};
 		if (element.length) {
 			for(let i = 0; i < element.length; i++) {
-				this.animateElements.push(element[i]);
+				this.animateElements.push({
+					element: element[i],
+					config: config
+				});
 			}
 		} else {
-			this.animateElements.push(element);
+			this.animateElements.push({
+				element: element,
+				config: config
+			});
 		}
 		return this;
 	}
 
-	/** 添加完新的动画元素后需要刷新 */
+	/** 移除一个元素 */
+	remove(ele) {
+		let element = _getElement(ele);
+		if (!element || element.length === 0) {
+			// 没有找到元素
+			console.warn('Element not found!\n未找到需要删除的元素.');
+			return;
+		};
+
+		// 移除元素
+		for(let i = 0; i < element.length; i++) {
+			for(let j = 0; j < this.animateElements.length; j++) {
+				if (element[i] === this.animateElements[j].element || element[i].isEqualNode(this.animateElements[j].element)) {
+					this.animateElements[j].isRemove = true; // 标志需要稍后移除的元素
+				}
+			}
+		}
+		this.animateElements = this.animateElements.filter(item => !item.isRemove); // 移除
+		return this;
+	}
+
+	/** 添加完新的动画元素后需要刷新(添加元素都要手动刷新,考虑到可能一次加很多元素就让使用者自己控制) */
 	refresh() {
 		this._init();
 		return this;
+	}
+
+	/** 监听resize重新绘制 */
+	_resize() {
+		_addEvent(window, 'resize', _throttle(() => {
+			this.refresh();
+		}, 200));
+	}
+
+	/** 清除之前的样式 */
+	_clearStyle(ele) {
+		let style = ele.getAttribute('style'); // 获取样式
+		if (style) {
+			// 修复resize后获取的top,left是之前动画最后帧设置的bug
+			style = style.split(';').filter(item => {
+				const trim = item.trim();
+				return trim.slice(0, 3) !== 'top' && trim.slice(0, 4) !== 'left';
+			});
+			ele.setAttribute('style', style.join(';'));
+		}
 	}
 }
