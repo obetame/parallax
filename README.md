@@ -61,6 +61,7 @@ all config:
 	yRange: 20,
 	listenElement: window,
 	animate: false,
+	invert: false,
 	enterCallback: function() {},
 	leaveCallback: function() {}
 }
@@ -71,6 +72,7 @@ The above values are all defaults.
 - `xRange, yRange`: the movable distance of an element on the X and Y axis.
 - `listenElement`: the element that listens for the mouseover event(in Mobile device is window and you can't change it).
 - `animate`: when `xRange, yRange` is greater than 80 or more, you can consider opening this option.
+- `invert`: reverse direction movement.
 - `enterCallback`: mouse enter `listenElement` will callback this funciton.
 - `leaveCallback`: mouse leave `listenElement` will callback this funciton.
 

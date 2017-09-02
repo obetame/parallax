@@ -78,6 +78,29 @@ const _throttle = function(fn, time = 1000/60) {
 	}
 }
 
+/** 格式化dom上的data数据,主要是空字符串 */
+const parseData = function(data) {
+	if (!data) {
+		return false;
+	}
+	if (data.length && data.length === 0) {
+		return false;
+	} else {
+		switch(data) {
+			case 'true':
+				return true;
+			case 'false':
+				return false;
+			case '1':
+				return true;
+			case '0':
+				return false;
+			default:
+				return true;
+		}
+	}
+}
+
 /** 导出 */
 export default class Parallax {
 	constructor(ele, config = {}) {
@@ -86,6 +109,7 @@ export default class Parallax {
 			yRange: 20,
 			listenElement: window,
 			animate: false, // 移动端才会使用
+			invert: false, // 反向移动
 			enterCallback: () => {},
 			leaveCallback: () => {}
 		}, config);
@@ -112,7 +136,8 @@ export default class Parallax {
 				offsetTop = ele.element.offsetTop, // 上边的距离
 				listenElement = _getElement(ele.config.listenElement, true), // 获取监听事件的元素
 				listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth, // 监听的元素的宽度
-				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
+				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight, // 监听的元素的高度
+				isInvert = ele.element.dataset ? parseData(ele.element.dataset.invert) || ele.config.invert : ele.config.invert; // 默认优先dom上的参数;
 
 			if (this.isMobile && this._config.animate) {
 				// 配置移动端样式,当xRange,yRange数值较大的时候可以启用,
@@ -129,7 +154,8 @@ export default class Parallax {
 				offsetTop: offsetTop,
 				listenElement: listenElement,
 				listenElementWidth: listenElementWidth,
-				listenElementHeight: listenElementHeight
+				listenElementHeight: listenElementHeight,
+				isInvert: isInvert
 			}
 		});
 	}
@@ -151,13 +177,15 @@ export default class Parallax {
 					if (x === 0 || y === 0) return;
 
 					this.animateElementsConfig.forEach(item => {
-						const top = (y / 9.78049) * item.yRange + item.offsetTop + 'px',
-									left = (-x / 9.78049) * item.xRange + item.offsetLeft + 'px';
+						let top = (y / 9.78049) * item.yRange,
+								left = (-x / 9.78049) * item.xRange;
+
+						item.isInvert && (top = -top,left = -left);
 						if (item.element.style.top !== top) {
-							item.element.style.top = top;
+							item.element.style.top = top + item.offsetTop + 'px';
 						}
 						if (item.element.style.left !== left) {
-							item.element.style.left = left;
+							item.element.style.left = left + item.offsetLeft + 'px';
 						}
 					});
 				});
@@ -174,13 +202,15 @@ export default class Parallax {
 					this._config.enterCallback();
 				}
 				this.animateElementsConfig.forEach(item => {
-					const top = (e.pageY / item.listenElementHeight) * item.yRange + item.offsetTop + 'px',
-								left = (e.pageX / item.listenElementWidth) * item.xRange + item.offsetLeft + 'px';
+					let top = (e.pageY / item.listenElementHeight) * item.yRange,
+							left = (e.pageX / item.listenElementWidth) * item.xRange;
+
+					item.isInvert && (top = -top,left = -left);
 					if (item.element.style.top !== top) {
-						item.element.style.top = top;
+						item.element.style.top = top + item.offsetTop + 'px';
 					}
 					if (item.element.style.left !== left) {
-						item.element.style.left = left;
+						item.element.style.left = left + item.offsetLeft + 'px';
 					}
 				});
 			});
