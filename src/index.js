@@ -85,6 +85,7 @@ export default class Parallax {
 			xRange: 20,
 			yRange: 20,
 			listenElement: window,
+			animate: false, // 移动端才会使用
 			enterCallback: () => {},
 			leaveCallback: () => {}
 		}, config);
@@ -113,9 +114,12 @@ export default class Parallax {
 				listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth, // 监听的元素的宽度
 				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
 
-			if (this.isMobile) {
-				// 配置移动端样式
-				ele.element.style.transition = 'top,left 0.2s ease-in-out'; // 移动端增加缓动动画
+			if (this.isMobile && this._config.animate) {
+				// 配置移动端样式,当xRange,yRange数值较大的时候可以启用,
+				// 但是较小的时候就不需要,
+				// 考虑增加一个配置参数来设置,
+				// 但是会增加动画的延迟时间
+				ele.element.style.transition = 'top,left 0.05s linear'; // 移动端增加缓动动画
 			}
 			return {
 				element: ele.element,
@@ -132,18 +136,53 @@ export default class Parallax {
 
 	/** 开始监听事件(移动dom) */
 	_start() {
-		// 监听元素监听鼠标移动事件
+		// 移动端监听重力加速度
+		if (this.isMobile && 'ondevicemotion' in window) {
+			_addEvent(window, 'devicemotion', e => {
+				requestAnimationFrame(() => {
+					let {x, y} = e.accelerationIncludingGravity;
+					try {
+						x = parseFloat(x.toFixed(4));
+						y = parseFloat(y.toFixed(4));
+					} catch(e) {
+						console.warn('你需要使用真实的移动设备来测试,并且需要有陀螺仪功能.');
+						return;
+					}
+					if (x === 0 || y === 0) return;
+
+					this.animateElementsConfig.forEach(item => {
+						const top = (y / 9.78049) * item.yRange + item.offsetTop + 'px',
+									left = (-x / 9.78049) * item.xRange + item.offsetLeft + 'px';
+						if (item.element.style.top !== top) {
+							item.element.style.top = top;
+						}
+						if (item.element.style.left !== left) {
+							item.element.style.left = left;
+						}
+					});
+				});
+			});
+			return;
+		}
+
 		const listenElement = _getElement(this._config.listenElement, true);
+		// PC上监听元素监听鼠标移动事件
 		_addEvent(listenElement, 'mousemove', e => {
-			if (!this.isEnter) {
-				this.isEnter = true;
-				this._config.enterCallback();
-			}
 			requestAnimationFrame(() => {
-				for(let i = 0; i < this.animateElementsConfig.length; i++) {
-					this.animateElementsConfig[i].element.style.top = (e.pageY / this.animateElementsConfig[i].listenElementHeight) * this.animateElementsConfig[i].yRange + this.animateElementsConfig[i].offsetTop + 'px';
-					this.animateElementsConfig[i].element.style.left = (e.pageX / this.animateElementsConfig[i].listenElementWidth) * this.animateElementsConfig[i].xRange + this.animateElementsConfig[i].offsetLeft + 'px';
+				if (!this.isEnter) {
+					this.isEnter = true;
+					this._config.enterCallback();
 				}
+				this.animateElementsConfig.forEach(item => {
+					const top = (e.pageY / item.listenElementHeight) * item.yRange + item.offsetTop + 'px',
+								left = (e.pageX / item.listenElementWidth) * item.xRange + item.offsetLeft + 'px';
+					if (item.element.style.top !== top) {
+						item.element.style.top = top;
+					}
+					if (item.element.style.left !== left) {
+						item.element.style.left = left;
+					}
+				});
 			});
 		});
 		// 监听移除事件

@@ -27,7 +27,7 @@ gulp.task('default', function() {
 			module: modules
 		}))
 		.pipe(gulp.dest('dest/'))
-		.pipe(gulp.dest(path.join(path.resolve(), '/../../Desktop/')))
+		// .pipe(gulp.dest(path.join(path.resolve(), '/../../Documents/server/public')))
 		.pipe(notify("<%= file.relative %> 成功生成!"));
 });
 
@@ -42,5 +42,6 @@ gulp.task('min', function() {
 		}))
 		.pipe(uglify())//生产的时候再启用压缩
 		.pipe(gulp.dest('dest/'))
+		// .pipe(gulp.dest(path.join(path.resolve(), '/../../Documents/server/public')))
 		.pipe(notify("<%= file.relative %> 成功生成!"));
 });

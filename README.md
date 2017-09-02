@@ -2,6 +2,7 @@
 
 - Based on native JS, you do not need to install other dependencies.
 - Focus on interaction, rather than just rolling parallax (not intended to support scrolling parallax, after all, GitHub has many plugins that have been implemented).
+- Support mobile device.
 
 ## Installation
 
@@ -59,11 +60,19 @@ all config:
 	xRange: 20, // Use attribute on priority
 	yRange: 20,
 	listenElement: window,
+	animate: false,
 	enterCallback: function() {},
 	leaveCallback: function() {}
 }
-// The above values are all defaults
 ```
+
+The above values are all defaults.
+
+`xRange, yRange`: the movable distance of an element on the X and Y axis.
+`listenElement`: the element that listens for the mouseover event(in Mobile device is window and you can't change it).
+`animate`: when `xRange, yRange` is greater than 80 or more, you can consider opening this option.
+`enterCallback`: mouse enter `listenElement` will callback this funciton.
+`leaveCallback`: mouse leave `listenElement` will callback this funciton.
 
 ## API
 
@@ -118,4 +127,16 @@ parallax
   .add('.other')
   .add('.three')
   .refresh();
+```
+
+## Contributing
+
+If you have a pull request you would like to submit, please ensure that you update the minified version of the library along with your code changes.This project uses `gulp`.
+
+```shell
+# dev
+gulp
+
+# min file
+gulp min
 ```
