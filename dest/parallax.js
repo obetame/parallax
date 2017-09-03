@@ -798,7 +798,7 @@ var _throttle = function _throttle(fn) {
 	};
 };
 
-/** 格式化dom上的data数据,主要是空字符串 */
+/** 格式化数据为真假 */
 var parseData = function parseData(data) {
 	if (!data) {
 		return false;
@@ -819,6 +819,23 @@ var parseData = function parseData(data) {
 				return true;
 		}
 	}
+};
+
+/** 获取dom上的配置数据 */
+var getDomConfigData = function getDomConfigData(ele) {
+	var xRange = void 0,
+	    yRange = void 0;
+	if (ele.dataset) {
+		xRange = parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : ele.config.xRange;
+		yRange = parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : ele.config.yRange;
+	} else {
+		xRange = ele.config.xRange;
+		yRange = ele.config.yRange;
+	}
+	return {
+		xRange: xRange,
+		yRange: yRange
+	};
 };
 
 /** 导出 */
@@ -859,20 +876,16 @@ var Parallax = function () {
 
 			this.animateElementsConfig = this.animateElements.map(function (ele, index) {
 				_this2._clearStyle(ele.element); // 清除之前的top,left样式
-				var xRange = ele.element.dataset ? parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange : ele.config.xRange,
-				    // 默认优先dom上的参数
-				yRange = ele.element.dataset ? parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange : ele.config.yRange,
+
+				var _getDomConfigData = getDomConfigData(ele),
+				    xRange = _getDomConfigData.xRange,
+				    yRange = _getDomConfigData.yRange,
 				    offsetLeft = ele.element.offsetLeft,
-				    // 左边的距离
-				offsetTop = ele.element.offsetTop,
-				    // 上边的距离
-				listenElement = _getElement(ele.config.listenElement, true),
-				    // 获取监听事件的元素
-				listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth,
-				    // 监听的元素的宽度
-				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight,
-				    // 监听的元素的高度
-				isInvert = ele.element.dataset ? parseData(ele.element.dataset.invert) || ele.config.invert : ele.config.invert; // 默认优先dom上的参数;
+				    offsetTop = ele.element.offsetTop,
+				    listenElement = _getElement(ele.config.listenElement, true),
+				    listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth,
+				    listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight,
+				    isInvert = ele.element.dataset ? parseData(ele.element.dataset.invert) || ele.config.invert : ele.config.invert; // 默认优先dom上的参数;
 
 				if (_this2.isMobile && _this2._config.animate) {
 					// 配置移动端样式,当xRange,yRange数值较大的时候可以启用,
@@ -883,8 +896,8 @@ var Parallax = function () {
 				}
 				return {
 					element: ele.element,
-					xRange: xRange,
-					yRange: yRange,
+					xRange: parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : xRange,
+					yRange: parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : yRange,
 					offsetLeft: offsetLeft,
 					offsetTop: offsetTop,
 					listenElement: listenElement,

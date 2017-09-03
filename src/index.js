@@ -78,7 +78,7 @@ const _throttle = function(fn, time = 1000/60) {
 	}
 }
 
-/** 格式化dom上的data数据,主要是空字符串 */
+/** 格式化数据为真假 */
 const parseData = function(data) {
 	if (!data) {
 		return false;
@@ -98,6 +98,22 @@ const parseData = function(data) {
 			default:
 				return true;
 		}
+	}
+}
+
+/** 获取dom上的配置数据 */
+const getDomConfigData = function(ele) {
+	let xRange, yRange;
+	if (ele.dataset) {
+		xRange = parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : ele.config.xRange;
+		yRange = parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : ele.config.yRange;
+	} else {
+		xRange = ele.config.xRange;
+		yRange = ele.config.yRange;
+	}
+	return {
+		xRange,
+		yRange
 	}
 }
 
@@ -130,8 +146,7 @@ export default class Parallax {
 		this.animateElementsConfig = this.animateElements.map((ele, index) => {
 			this._clearStyle(ele.element); // 清除之前的top,left样式
 			const 
-				xRange = ele.element.dataset ? parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange : ele.config.xRange, // 默认优先dom上的参数
-				yRange = ele.element.dataset ? parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange : ele.config.yRange,
+				{ xRange, yRange } = getDomConfigData(ele),
 				offsetLeft = ele.element.offsetLeft, // 左边的距离
 				offsetTop = ele.element.offsetTop, // 上边的距离
 				listenElement = _getElement(ele.config.listenElement, true), // 获取监听事件的元素
@@ -148,8 +163,8 @@ export default class Parallax {
 			}
 			return {
 				element: ele.element,
-				xRange: xRange,
-				yRange: yRange,
+				xRange: parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : xRange,
+				yRange: parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : yRange,
 				offsetLeft: offsetLeft,
 				offsetTop: offsetTop,
 				listenElement: listenElement,
