@@ -896,8 +896,8 @@ var Parallax = function () {
 				}
 				return {
 					element: ele.element,
-					xRange: parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : xRange,
-					yRange: parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : yRange,
+					xRange: xRange,
+					yRange: yRange,
 					offsetLeft: offsetLeft,
 					offsetTop: offsetTop,
 					listenElement: listenElement,
