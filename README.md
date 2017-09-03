@@ -4,6 +4,8 @@
 - Focus on interaction, rather than just rolling parallax (not intended to support scrolling parallax, after all, GitHub has many plugins that have been implemented).
 - Support mobile device.
 
+[Demo here](https://quietboys.github.io/parallax)(You can use mobile device open it.)
+
 ## Installation
 
 You can use npm:
