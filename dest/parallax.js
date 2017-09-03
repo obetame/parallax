@@ -825,7 +825,7 @@ var parseData = function parseData(data) {
 var getDomConfigData = function getDomConfigData(ele) {
 	var xRange = void 0,
 	    yRange = void 0;
-	if (ele.dataset) {
+	if (ele.element.dataset) {
 		xRange = parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : ele.config.xRange;
 		yRange = parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : ele.config.yRange;
 	} else {

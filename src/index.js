@@ -104,7 +104,7 @@ const parseData = function(data) {
 /** 获取dom上的配置数据 */
 const getDomConfigData = function(ele) {
 	let xRange, yRange;
-	if (ele.dataset) {
+	if (ele.element.dataset) {
 		xRange = parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : ele.config.xRange;
 		yRange = parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : ele.config.yRange;
 	} else {
