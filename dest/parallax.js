@@ -821,32 +821,6 @@ var parseData = function parseData(data) {
 	}
 };
 
-/** 获取dom上的配置数据 */
-var getDomConfigData = function getDomConfigData(ele) {
-	var xRange = void 0,
-	    yRange = void 0;
-	if (ele.element.dataset) {
-		if (parseInt(ele.element.dataset.xrange, 0) === 0) {
-			xRange = 0;
-		} else {
-			xRange = parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange;
-		}
-
-		if (parseInt(ele.element.dataset.yrange, 0) === 0) {
-			yRange = 0;
-		} else {
-			yRange = parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange;
-		}
-	} else {
-		xRange = ele.config.xRange;
-		yRange = ele.config.yRange;
-	}
-	return {
-		xRange: xRange,
-		yRange: yRange
-	};
-};
-
 /** 导出 */
 
 var Parallax = function () {
@@ -865,12 +839,12 @@ var Parallax = function () {
 		}, config);
 		this.element = _getElement(ele); // 获取元素
 		this.animateElements = [];
-		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
+		this.animateElementsQueue; // 需要进行动画的所有dom有关的细节
 		this.isMobile = Boolean(navigator.userAgent.match(/(iPhone|iPod|Android|ios)/i));
 		this.isEnter = false; // 是否进入tag
 
 		this.add(); // add all element to this.animateElements
-		this._init(); // this.animateElementsConfig
+		this._init(); // this.animateElementsQueue
 		this._resize();
 		this._start();
 	}
@@ -883,18 +857,21 @@ var Parallax = function () {
 		value: function _init() {
 			var _this2 = this;
 
-			this.animateElementsConfig = this.animateElements.map(function (ele, index) {
+			this.animateElementsQueue = this.animateElements.map(function (ele, index) {
 				_this2._clearStyle(ele.element); // 清除之前的top,left样式
 
-				var _getDomConfigData = getDomConfigData(ele),
-				    xRange = _getDomConfigData.xRange,
-				    yRange = _getDomConfigData.yRange,
+				var _ele$config = ele.config,
+				    xRange = _ele$config.xRange,
+				    yRange = _ele$config.yRange,
+				    isInvert = _ele$config.isInvert,
+				    isAnimate = _ele$config.isAnimate,
+				    maxXrange = _ele$config.maxXrange,
+				    maxYrange = _ele$config.maxYrange,
 				    offsetLeft = ele.element.offsetLeft,
 				    offsetTop = ele.element.offsetTop,
 				    listenElement = _getElement(ele.config.listenElement, true),
 				    listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth,
-				    listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight,
-				    isInvert = ele.element.dataset ? parseData(ele.element.dataset.invert) || ele.config.invert : ele.config.invert; // 默认优先dom上的参数;
+				    listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
 
 				if (_this2.isMobile && _this2._config.animate) {
 					// 配置移动端样式,当xRange,yRange数值较大的时候可以启用,
@@ -912,7 +889,10 @@ var Parallax = function () {
 					listenElement: listenElement,
 					listenElementWidth: listenElementWidth,
 					listenElementHeight: listenElementHeight,
-					isInvert: isInvert
+					isInvert: isInvert,
+					isAnimate: isAnimate,
+					maxXrange: maxXrange,
+					maxYrange: maxYrange
 				};
 			});
 		}
@@ -941,7 +921,7 @@ var Parallax = function () {
 						}
 						if (x === 0 || y === 0) return;
 
-						_this3.animateElementsConfig.forEach(function (item) {
+						_this3.animateElementsQueue.forEach(function (item) {
 							var top = y / 9.78049 * item.yRange,
 							    left = -x / 9.78049 * item.xRange;
 
@@ -966,7 +946,7 @@ var Parallax = function () {
 						_this3.isEnter = true;
 						_this3._config.enterCallback();
 					}
-					_this3.animateElementsConfig.forEach(function (item) {
+					_this3.animateElementsQueue.forEach(function (item) {
 						var top = e.pageY / item.listenElementHeight * item.yRange,
 						    left = e.pageX / item.listenElementWidth * item.xRange;
 
@@ -1009,13 +989,13 @@ var Parallax = function () {
 				for (var i = 0; i < element.length; i++) {
 					this.animateElements.push({
 						element: element[i],
-						config: config
+						config: (0, _assign2.default)({}, config, this._getDomConfigData(element[i], config))
 					});
 				}
 			} else {
 				this.animateElements.push({
 					element: element,
-					config: config
+					config: (0, _assign2.default)({}, config, this._getDomConfigData(element, config))
 				});
 			}
 			return this;
@@ -1082,6 +1062,30 @@ var Parallax = function () {
 				});
 				ele.setAttribute('style', style.join(';'));
 			}
+		}
+
+		/** 获取dom上的配置数据 */
+
+	}, {
+		key: '_getDomConfigData',
+		value: function _getDomConfigData(ele, config) {
+			var data = {};
+			if (ele.dataset) {
+				if (parseInt(ele.dataset.xrange, 0) === 0) {
+					data.xRange = 0;
+				} else {
+					data.xRange = parseInt(ele.dataset.xrange, 0) || config.xRange;
+				}
+
+				if (parseInt(ele.dataset.yrange, 0) === 0) {
+					data.yRange = 0;
+				} else {
+					data.yRange = parseInt(ele.dataset.yrange, 0) || config.yRange;
+				}
+				data.isInvert = parseData(ele.dataset.invert);
+				data.isAnimate = parseData(ele.dataset.animate);
+			}
+			return data;
 		}
 	}]);
 	return Parallax;
