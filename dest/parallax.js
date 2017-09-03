@@ -821,32 +821,6 @@ var parseData = function parseData(data) {
 	}
 };
 
-/** 获取dom上的配置数据 */
-var getDomConfigData = function getDomConfigData(ele) {
-	var xRange = void 0,
-	    yRange = void 0;
-	if (ele.element.dataset) {
-		if (parseInt(ele.element.dataset.xrange, 0) === 0) {
-			xRange = 0;
-		} else {
-			xRange = parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange;
-		}
-
-		if (parseInt(ele.element.dataset.yrange, 0) === 0) {
-			yRange = 0;
-		} else {
-			yRange = parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange;
-		}
-	} else {
-		xRange = ele.config.xRange;
-		yRange = ele.config.yRange;
-	}
-	return {
-		xRange: xRange,
-		yRange: yRange
-	};
-};
-
 /** 导出 */
 
 var Parallax = function () {
@@ -856,7 +830,9 @@ var Parallax = function () {
 
 		this._config = (0, _assign2.default)({
 			xRange: 20,
+			maxXrange: 0,
 			yRange: 20,
+			maxYrange: 0,
 			listenElement: window,
 			animate: false, // 移动端才会使用
 			invert: false, // 反向移动
@@ -865,12 +841,12 @@ var Parallax = function () {
 		}, config);
 		this.element = _getElement(ele); // 获取元素
 		this.animateElements = [];
-		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
+		this.animateElementsQueue; // 执行动画队列
 		this.isMobile = Boolean(navigator.userAgent.match(/(iPhone|iPod|Android|ios)/i));
 		this.isEnter = false; // 是否进入tag
 
 		this.add(); // add all element to this.animateElements
-		this._init(); // this.animateElementsConfig
+		this._init(); // this.animateElementsQueue
 		this._resize();
 		this._start();
 	}
@@ -883,20 +859,23 @@ var Parallax = function () {
 		value: function _init() {
 			var _this2 = this;
 
-			this.animateElementsConfig = this.animateElements.map(function (ele, index) {
+			this.animateElementsQueue = this.animateElements.map(function (ele, index) {
 				_this2._clearStyle(ele.element); // 清除之前的top,left样式
 
-				var _getDomConfigData = getDomConfigData(ele),
-				    xRange = _getDomConfigData.xRange,
-				    yRange = _getDomConfigData.yRange,
+				var _ele$config = ele.config,
+				    xRange = _ele$config.xRange,
+				    yRange = _ele$config.yRange,
+				    isInvert = _ele$config.isInvert,
+				    isAnimate = _ele$config.isAnimate,
+				    maxXrange = _ele$config.maxXrange,
+				    maxYrange = _ele$config.maxYrange,
 				    offsetLeft = ele.element.offsetLeft,
 				    offsetTop = ele.element.offsetTop,
 				    listenElement = _getElement(ele.config.listenElement, true),
 				    listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth,
-				    listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight,
-				    isInvert = ele.element.dataset ? parseData(ele.element.dataset.invert) || ele.config.invert : ele.config.invert; // 默认优先dom上的参数;
+				    listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
 
-				if (_this2.isMobile && _this2._config.animate) {
+				if (_this2.isMobile && isAnimate) {
 					// 配置移动端样式,当xRange,yRange数值较大的时候可以启用,
 					// 但是较小的时候就不需要,
 					// 考虑增加一个配置参数来设置,
@@ -912,7 +891,10 @@ var Parallax = function () {
 					listenElement: listenElement,
 					listenElementWidth: listenElementWidth,
 					listenElementHeight: listenElementHeight,
-					isInvert: isInvert
+					isInvert: isInvert,
+					isAnimate: isAnimate,
+					maxXrange: maxXrange,
+					maxYrange: maxYrange
 				};
 			});
 		}
@@ -935,13 +917,13 @@ var Parallax = function () {
 						try {
 							x = parseFloat(x.toFixed(4));
 							y = parseFloat(y.toFixed(4));
-						} catch (e) {
+						} catch (err) {
 							console.warn('你需要使用真实的移动设备来测试,并且需要有陀螺仪功能.');
 							return;
 						}
 						if (x === 0 || y === 0) return;
 
-						_this3.animateElementsConfig.forEach(function (item) {
+						_this3.animateElementsQueue.forEach(function (item) {
 							var top = y / 9.78049 * item.yRange,
 							    left = -x / 9.78049 * item.xRange;
 
@@ -966,15 +948,15 @@ var Parallax = function () {
 						_this3.isEnter = true;
 						_this3._config.enterCallback();
 					}
-					_this3.animateElementsConfig.forEach(function (item) {
+					_this3.animateElementsQueue.forEach(function (item) {
 						var top = e.pageY / item.listenElementHeight * item.yRange,
 						    left = e.pageX / item.listenElementWidth * item.xRange;
 
 						item.isInvert && (top = -top, left = -left);
-						if (item.element.style.top !== top) {
+						if (item.element.style.top !== top && (item.maxYrange === 0 || item.maxYrange >= Math.abs(top))) {
 							item.element.style.top = top + item.offsetTop + 'px';
 						}
-						if (item.element.style.left !== left) {
+						if (item.element.style.left !== left && (item.maxXrange === 0 || item.maxXrange >= Math.abs(left))) {
 							item.element.style.left = left + item.offsetLeft + 'px';
 						}
 					});
@@ -1009,13 +991,13 @@ var Parallax = function () {
 				for (var i = 0; i < element.length; i++) {
 					this.animateElements.push({
 						element: element[i],
-						config: config
+						config: (0, _assign2.default)({}, config, this._getDomConfigData(element[i], config))
 					});
 				}
 			} else {
 				this.animateElements.push({
 					element: element,
-					config: config
+					config: (0, _assign2.default)({}, config, this._getDomConfigData(element, config))
 				});
 			}
 			return this;
@@ -1082,6 +1064,42 @@ var Parallax = function () {
 				});
 				ele.setAttribute('style', style.join(';'));
 			}
+		}
+
+		/** 获取dom上的配置数据 */
+
+	}, {
+		key: '_getDomConfigData',
+		value: function _getDomConfigData(ele, config) {
+			var data = {};
+			if (ele.dataset) {
+				if (parseInt(ele.dataset.xrange, 0) === 0) {
+					data.xRange = 0;
+				} else {
+					data.xRange = parseInt(ele.dataset.xrange, 0) || config.xRange;
+				}
+
+				if (parseInt(ele.dataset.yrange, 0) === 0) {
+					data.yRange = 0;
+				} else {
+					data.yRange = parseInt(ele.dataset.yrange, 0) || config.yRange;
+				}
+
+				if (parseInt(ele.dataset.maxxrange, 0) === 0) {
+					data.maxXrange = 0;
+				} else {
+					data.maxXrange = parseInt(ele.dataset.maxxrange, 0) || config.maxXrange;
+				}
+
+				if (parseInt(ele.dataset.maxyrange, 0) === 0) {
+					data.maxYrange = 0;
+				} else {
+					data.maxYrange = parseInt(ele.dataset.maxyrange, 0) || config.maxYrange;
+				}
+				data.isInvert = parseData(ele.dataset.invert);
+				data.isAnimate = parseData(ele.dataset.animate);
+			}
+			return data;
 		}
 	}]);
 	return Parallax;

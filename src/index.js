@@ -101,37 +101,14 @@ const parseData = function(data) {
 	}
 }
 
-/** 获取dom上的配置数据 */
-const getDomConfigData = function(ele) {
-	let xRange, yRange;
-	if (ele.element.dataset) {
-		if (parseInt(ele.element.dataset.xrange, 0) === 0) {
-			xRange = 0;
-		} else {
-			xRange = parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange;
-		}
-
-		if (parseInt(ele.element.dataset.yrange, 0) === 0) {
-			yRange = 0;
-		} else {
-			yRange = parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange;
-		}
-	} else {
-		xRange = ele.config.xRange;
-		yRange = ele.config.yRange;
-	}
-	return {
-		xRange,
-		yRange
-	}
-}
-
 /** 导出 */
 export default class Parallax {
 	constructor(ele, config = {}) {
 		this._config = Object.assign({
 			xRange: 20,
+			maxXrange: 0,
 			yRange: 20,
+			maxYrange: 0,
 			listenElement: window,
 			animate: false, // 移动端才会使用
 			invert: false, // 反向移动
@@ -140,30 +117,35 @@ export default class Parallax {
 		}, config);
 		this.element = _getElement(ele); // 获取元素
 		this.animateElements = [];
-		this.animateElementsConfig; // 需要进行动画的所有dom有关的细节
+		this.animateElementsQueue; // 执行动画队列
 		this.isMobile = Boolean(navigator.userAgent.match(/(iPhone|iPod|Android|ios)/i));
 		this.isEnter = false; // 是否进入tag
 
 		this.add(); // add all element to this.animateElements
-		this._init(); // this.animateElementsConfig
+		this._init(); // this.animateElementsQueue
 		this._resize();
 		this._start();
 	}
 
 	/** 初始化配置 */
 	_init() {
-		this.animateElementsConfig = this.animateElements.map((ele, index) => {
+		this.animateElementsQueue = this.animateElements.map((ele, index) => {
 			this._clearStyle(ele.element); // 清除之前的top,left样式
 			const 
-				{ xRange, yRange } = getDomConfigData(ele),
+				{ xRange,
+					yRange,
+					isInvert,
+					isAnimate,
+					maxXrange,
+					maxYrange
+				} = ele.config,
 				offsetLeft = ele.element.offsetLeft, // 左边的距离
 				offsetTop = ele.element.offsetTop, // 上边的距离
 				listenElement = _getElement(ele.config.listenElement, true), // 获取监听事件的元素
 				listenElementWidth = listenElement.innerWidth ? listenElement.innerWidth : listenElement.clientWidth, // 监听的元素的宽度
-				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight, // 监听的元素的高度
-				isInvert = ele.element.dataset ? parseData(ele.element.dataset.invert) || ele.config.invert : ele.config.invert; // 默认优先dom上的参数;
+				listenElementHeight = listenElement.innerHeight ? listenElement.innerHeight : listenElement.clientHeight; // 监听的元素的高度
 
-			if (this.isMobile && this._config.animate) {
+			if (this.isMobile && isAnimate) {
 				// 配置移动端样式,当xRange,yRange数值较大的时候可以启用,
 				// 但是较小的时候就不需要,
 				// 考虑增加一个配置参数来设置,
@@ -172,14 +154,17 @@ export default class Parallax {
 			}
 			return {
 				element: ele.element,
-				xRange: xRange,
-				yRange: yRange,
-				offsetLeft: offsetLeft,
-				offsetTop: offsetTop,
-				listenElement: listenElement,
-				listenElementWidth: listenElementWidth,
-				listenElementHeight: listenElementHeight,
-				isInvert: isInvert
+				xRange,
+				yRange,
+				offsetLeft,
+				offsetTop,
+				listenElement,
+				listenElementWidth,
+				listenElementHeight,
+				isInvert,
+				isAnimate,
+				maxXrange,
+				maxYrange
 			}
 		});
 	}
@@ -194,13 +179,13 @@ export default class Parallax {
 					try {
 						x = parseFloat(x.toFixed(4));
 						y = parseFloat(y.toFixed(4));
-					} catch(e) {
+					} catch(err) {
 						console.warn('你需要使用真实的移动设备来测试,并且需要有陀螺仪功能.');
 						return;
 					}
 					if (x === 0 || y === 0) return;
 
-					this.animateElementsConfig.forEach(item => {
+					this.animateElementsQueue.forEach(item => {
 						let top = (y / 9.78049) * item.yRange,
 								left = (-x / 9.78049) * item.xRange;
 
@@ -225,15 +210,15 @@ export default class Parallax {
 					this.isEnter = true;
 					this._config.enterCallback();
 				}
-				this.animateElementsConfig.forEach(item => {
+				this.animateElementsQueue.forEach(item => {
 					let top = (e.pageY / item.listenElementHeight) * item.yRange,
 							left = (e.pageX / item.listenElementWidth) * item.xRange;
 
 					item.isInvert && (top = -top,left = -left);
-					if (item.element.style.top !== top) {
+					if (item.element.style.top !== top && (item.maxYrange === 0 || item.maxYrange >= Math.abs(top))) {
 						item.element.style.top = top + item.offsetTop + 'px';
 					}
-					if (item.element.style.left !== left) {
+					if (item.element.style.left !== left && (item.maxXrange === 0 || item.maxXrange >= Math.abs(left))) {
 						item.element.style.left = left + item.offsetLeft + 'px';
 					}
 				});
@@ -262,13 +247,13 @@ export default class Parallax {
 			for(let i = 0; i < element.length; i++) {
 				this.animateElements.push({
 					element: element[i],
-					config: config
+					config: Object.assign({}, config, this._getDomConfigData(element[i], config))
 				});
 			}
 		} else {
 			this.animateElements.push({
 				element: element,
-				config: config
+				config: Object.assign({}, config, this._getDomConfigData(element, config))
 			});
 		}
 		return this;
@@ -319,5 +304,38 @@ export default class Parallax {
 			});
 			ele.setAttribute('style', style.join(';'));
 		}
+	}
+
+	/** 获取dom上的配置数据 */
+	_getDomConfigData(ele, config) {
+		let data = {};
+		if (ele.dataset) {
+			if (parseInt(ele.dataset.xrange, 0) === 0) {
+				data.xRange = 0;
+			} else {
+				data.xRange = parseInt(ele.dataset.xrange, 0) || config.xRange;
+			}
+
+			if (parseInt(ele.dataset.yrange, 0) === 0) {
+				data.yRange = 0;
+			} else {
+				data.yRange = parseInt(ele.dataset.yrange, 0) || config.yRange;
+			}
+
+			if (parseInt(ele.dataset.maxxrange, 0) === 0) {
+				data.maxXrange = 0;
+			} else {
+				data.maxXrange = parseInt(ele.dataset.maxxrange, 0) || config.maxXrange;
+			}
+
+			if (parseInt(ele.dataset.maxyrange, 0) === 0) {
+				data.maxYrange = 0;
+			} else {
+				data.maxYrange = parseInt(ele.dataset.maxyrange, 0) || config.maxYrange;
+			}
+			data.isInvert = parseData(ele.dataset.invert);
+			data.isAnimate = parseData(ele.dataset.animate);
+		}
+		return data;
 	}
 }
