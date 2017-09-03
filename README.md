@@ -30,14 +30,13 @@ Or download `parallax.min.js` file and include in you document:
 
 ```html
 <div class="parallax">
-	<div class="box"></div>
-	<div class="box"></div>
+  <div class="box"></div>
+  <div class="box"></div>
 </div>
 ```
 
 ```js
 const parallax = new Parallax('.box'); // className or other selector
-parallax.start();
 ```
 
 ## Usage
