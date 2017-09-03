@@ -826,8 +826,17 @@ var getDomConfigData = function getDomConfigData(ele) {
 	var xRange = void 0,
 	    yRange = void 0;
 	if (ele.element.dataset) {
-		xRange = parseInt(ele.element.dataset.xrange, 0) === 0 ? 0 : ele.config.xRange;
-		yRange = parseInt(ele.element.dataset.yrange, 0) === 0 ? 0 : ele.config.yRange;
+		if (parseInt(ele.element.dataset.xrange, 0) === 0) {
+			xRange = 0;
+		} else {
+			xRange = parseInt(ele.element.dataset.xrange, 0) || ele.config.xRange;
+		}
+
+		if (parseInt(ele.element.dataset.yrange, 0) === 0) {
+			yRange = 0;
+		} else {
+			yRange = parseInt(ele.element.dataset.yrange, 0) || ele.config.yRange;
+		}
 	} else {
 		xRange = ele.config.xRange;
 		yRange = ele.config.yRange;
