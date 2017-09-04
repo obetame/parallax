@@ -4,6 +4,8 @@
 - Focus on interaction, rather than just rolling parallax (not intended to support scrolling parallax, after all, GitHub has many plugins that have been implemented).
 - Support mobile device.
 
+[Demo here](https://quietboys.github.io/parallax)(You can use mobile device open it.)
+
 ## Installation
 
 You can use npm:
@@ -28,14 +30,13 @@ Or download `parallax.min.js` file and include in you document:
 
 ```html
 <div class="parallax">
-	<div class="box"></div>
-	<div class="box"></div>
+  <div class="box"></div>
+  <div class="box"></div>
 </div>
 ```
 
 ```js
 const parallax = new Parallax('.box'); // className or other selector
-parallax.start();
 ```
 
 ## Usage
